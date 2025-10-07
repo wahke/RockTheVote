@@ -1,0 +1,8 @@
+VOTE_START=Vote: Switch to '{MAP}'? Type /yes or /no. Remaining: {SEC}s
+VOTE_TICK=YES:{YES} NO:{NO} | Players:{ONLINE} (Quorum:{QUORUM}%)
+VOTE_PASS=Accepted ({PCT}% YES, {VOTES} votes). Changing to {MAP}…
+VOTE_FAIL=Rejected ({PCT}% YES, {VOTES} votes; Quorum {QUORUM}%).
+VOTE_BUSY=A vote is already running.
+VOTE_FEW=Too few players online.
+VOTE_COOLDOWN=Please wait before starting another vote.
+MENU_TITLE=RockTheVote – Choose a map

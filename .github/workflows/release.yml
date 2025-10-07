@@ -1,0 +1,74 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"   # z.B. v1.0.0
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Version aus RockTheVote.as lesen und mit Tag abgleichen
+      - name: Extract version from RockTheVote.as
+        id: ver
+        shell: bash
+        run: |
+          FILE="scripts/plugins/RockTheVote/RockTheVote.as"
+          if [ ! -f "$FILE" ]; then
+            echo "Missing $FILE" >&2
+            exit 1
+          fi
+          VER=$(grep -Po 'const\s+string\s+RTV_VERSION\s*=\s*"\K[0-9]+\.[0-9]+\.[0-9]+' "$FILE" || true)
+          if [ -z "$VER" ]; then
+            echo "Could not find RTV_VERSION in $FILE" >&2
+            exit 1
+          fi
+          TAG="${GITHUB_REF_NAME#v}"
+          if [ "$VER" != "$TAG" ]; then
+            echo "Version mismatch: code=$VER tag=$TAG" >&2
+            exit 1
+          fi
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare package layout
+        shell: bash
+        run: |
+          mkdir -p dist/svencoop_addon/scripts/plugins/RockTheVote/lang
+          cp scripts/plugins/RockTheVote/RockTheVote.as dist/svencoop_addon/scripts/plugins/RockTheVote/
+          cp scripts/plugins/RockTheVote/rockthevote.cfg dist/svencoop_addon/scripts/plugins/RockTheVote/
+          cp scripts/plugins/RockTheVote/lang/*.txt dist/svencoop_addon/scripts/plugins/RockTheVote/lang/ 2>/dev/null || true
+          # optional: AMXX-Helper, falls vorhanden
+          if [ -f addons/amxmodx/scripting/rtv_indexer.sma ]; then
+            mkdir -p dist/optional/addons/amxmodx/scripting
+            cp addons/amxmodx/scripting/rtv_indexer.sma dist/optional/addons/amxmodx/scripting/
+          fi
+          # README/Lizenz optional beilegen
+          [ -f README.md ] && cp README.md dist/
+          [ -f LICENSE ] && cp LICENSE dist/
+
+      - name: Create zip
+        shell: bash
+        run: |
+          cd dist
+          ZIP="RockTheVote-v${{ steps.ver.outputs.version }}.zip"
+          zip -r "$ZIP" .
+          echo "zip_path=dist/$ZIP" >> $GITHUB_ENV
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: RockTheVote v${{ steps.ver.outputs.version }}
+          files: ${{ env.zip_path }}
+          generate_release_notes: true
