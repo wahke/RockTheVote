@@ -4,7 +4,8 @@ Ein schlichtes, robustes **Rock-The-Vote**-Plugin für **Sven Co-op ≥ 5.x**.
 Spieler starten per `/rtv` ein Map-Vote, wählen eine Map aus und alle stimmen mit **Ja/Nein** – per Menü (klickbar), Chat **oder** Keybind.
 Inklusive **10→1 Countdown** (fvox-Sprachsamples), Start-/Ergebnis-Sounds, Quorum/Prozent-Regeln, Mehrsprachigkeit und eigener Konfiguration.
 
-**Autor:** wahke.lu • **Copyright:** Created by wahke.lu
+**Autor:** wahke.lu 
+**Copyright:** Created by wahke.lu
 
 ---
 
@@ -157,13 +158,6 @@ enable_countdown_sounds=1
   - Keybinds: `bind F6 rtv_yes`, `bind F7 rtv_no`.
 - **Optional nominieren:** `/nom <mapname>` (falls aktiviert).
 - **Reload:** `as_reloadplugins` (Serverkonsole).
-
----
-
-## GitHub Release (automatisch)
-
-- Versionsnummer steht in `RockTheVote.as` als `const string RTV_VERSION = "X.Y.Z";`
-- Ein **Tag-Push** `vX.Y.Z` erzeugt via GitHub Actions automatisch ein ZIP und ein Release.
 
 ---
 

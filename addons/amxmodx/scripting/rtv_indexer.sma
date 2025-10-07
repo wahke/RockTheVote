@@ -9,7 +9,7 @@
 
 public plugin_init()
 {
-    register_plugin("RTV Map Indexer", "1.0.2", "wahke.lu");
+    register_plugin("RTV Map Indexer", "1.0.4", "wahke.lu");
     set_task(2.0, "build_index", 12345);
 }
 
