@@ -2,14 +2,14 @@
     // Plugin: RockTheVote
     // Author: wahke.lu
     // Copyright: Created by wahke.lu
-    // Description: Map Rock-The-Vote mit Menü, Chat, Bind-Keys, Countdown & Sounds.
+    // Description: Map Rock-The-Vote with menu, chat, bind-keys, countdown and sounds.
 
     namespace RTV
     {
-        // --- Version (für Releases) ---
-        const string RTV_VERSION = "1.0.1";
+        // --- Version (for releases) ---
+        const string RTV_VERSION = "1.0.2";
 
-        // ---------- Konfig ----------
+        // ---------- Config ----------
         class Cfg {
             uint minPlayers = 2;
             uint rtvStartCooldownSec = 120;
@@ -18,14 +18,14 @@
             uint passPercent = 60;
             uint quorumPercent = 50;
 
-            string mapsSource = "auto"; // auto | mapcycle | config | folder (folder => Index-Datei)
+            string mapsSource = "auto"; // auto | mapcycle | config | folder (folder => index file)
             string maplistPath = "scripts/plugins/RockTheVote/maps.txt";
 
             uint blockRecentCount = 3;
             uint minMapRuntimeMin = 5;
             bool allowNomination = true;
             string messagesLang = "de";
-            string adminOverrideFlag = ""; // optional (Platzhalter)
+            string adminOverrideFlag = ""; // optional placeholder
 
             // UI / Audio
             bool uiShowCenter = true;
@@ -45,12 +45,12 @@
         dictionary g_yesVotes; // steamid -> true
         dictionary g_noVotes;
         array<string> g_mapPool;
-        array<string> g_recentMaps; // optional – nicht persistiert in dieser Minimalfassung
+        array<string> g_recentMaps; // optional - not persisted in this minimal version
 
         dictionary g_playerCooldownUntil; // steamid -> time
         float g_lastVoteStart = 0.0f;
 
-        array<string> g_nominations; // einfache FIFO
+        array<string> g_nominations; // simple FIFO
 
         // ---------- Language ----------
         namespace Lang {
@@ -58,7 +58,7 @@
             void Set(const string &in code) { sel = code; }
             void Load(const string &in path) {
                 g.deleteAll();
-                File@ f = g_FileSystem.OpenFile(path, "r");
+                File@ f = g_FileSystem.OpenFile(path, OpenFile::READ);
                 if (f is null || !f.IsOpen()) return;
                 string line;
                 while (!f.EOFReached()) {
@@ -124,14 +124,20 @@
 
         // ---------- Config ----------
         void LoadConfig() {
-            File@ f = g_FileSystem.OpenFile("scripts/plugins/RockTheVote/rockthevote.cfg", "r");
+            File@ f = g_FileSystem.OpenFile("scripts/plugins/RockTheVote/rockthevote.cfg", OpenFile::READ);
             if (f is null || !f.IsOpen()) return;
             string line;
             while (!f.EOFReached()) {
                 f.ReadLine(line); line.Trim();
                 if (line.Length() == 0 || line[0] == '#') continue;
                 array<string>@ kv = line.Split("="); if (kv.length() != 2) continue;
-                string k = kv[0].ToLowercase().Trim(); string v = kv[1].Trim();
+
+                string k = kv[0];
+                k = k.ToLowercase();
+                k.Trim();
+
+                string v = kv[1];
+                v.Trim();
 
                 if (k == "min_players") g_cfg.minPlayers = atoi(v);
                 else if (k == "rtv_start_cooldown_sec") g_cfg.rtvStartCooldownSec = atoi(v);
@@ -159,15 +165,14 @@
             f.Close();
         }
 
-        // ---------- Mapliste ----------
+        // ---------- Map list ----------
         bool LoadListFile(const string &in path) {
-            File@ f = g_FileSystem.OpenFile(path, "r");
+            File@ f = g_FileSystem.OpenFile(path, OpenFile::READ);
             if (f is null || !f.IsOpen()) return false;
             string line; bool any = false;
             while (!f.EOFReached()) {
                 f.ReadLine(line); line.Trim();
                 if (line.Length() == 0 || line[0] == '#') continue;
-                // Optional: if (!g_EngineFuncs.IsMapValid(line)) continue;
                 g_mapPool.insertLast(line);
                 any = true;
             }
@@ -180,7 +185,7 @@
             bool ok = false;
 
             if (g_cfg.mapsSource == "auto") {
-                ok = LoadListFile("data/rockthevote_maps_index.txt"); // optional: via AMXX-Indexer
+                ok = LoadListFile("data/rockthevote_maps_index.txt"); // optional: via AMXX indexer
                 if (!ok) ok = LoadListFile("mapcycle.txt");
                 if (!ok) ok = LoadListFile(g_cfg.maplistPath);
             } else if (g_cfg.mapsSource == "mapcycle") {
@@ -188,11 +193,11 @@
             } else if (g_cfg.mapsSource == "config") {
                 ok = LoadListFile(g_cfg.maplistPath);
             } else if (g_cfg.mapsSource == "folder") {
-                // AngelScript kann Ordner nicht portabel scannen -> bitte Index-Datei nutzen.
+                // AngelScript cannot portably scan directories -> use index file instead.
                 ok = LoadListFile("data/rockthevote_maps_index.txt");
             }
 
-            // Nominierungen vorn einsortieren (optional, ohne Duplikate)
+            // Move nominations to the front (no duplicates)
             if (g_cfg.allowNomination && g_nominations.length() > 0) {
                 for (int i=int(g_nominations.length())-1; i>=0; --i) {
                     string m = g_nominations[i];
@@ -205,7 +210,7 @@
             }
         }
 
-        // ---------- Menüs ----------
+        // ---------- Menus ----------
         void OpenMapMenu(CBasePlayer@ pl) {
             if (g_voteActive) { PrintAll(Lang.T("VOTE_BUSY")); return; }
             if (OnlineCount() < g_cfg.minPlayers) { PrintAll(Lang.T("VOTE_FEW")); return; }
@@ -215,7 +220,7 @@
             if (!CanStartNewVote(id)) { PrintAll(Lang.T("VOTE_COOLDOWN")); return; }
 
             BuildMapPool();
-            if (g_mapPool.length() == 0) { PrintAll("Keine Maps gefunden (mapcycle/config/index leer?)"); return; }
+            if (g_mapPool.length() == 0) { PrintAll("No maps found (mapcycle/config/index empty?)"); return; }
 
             CTextMenu@ menu = CTextMenu(@OnMapChosen);
             menu.SetTitle(Lang.T("MENU_TITLE"));
@@ -226,19 +231,22 @@
             menu.Open(0, 0, pl);
         }
 
-        void OnMapChosen(CTextMenu@, CBasePlayer@ pl, int item, const string& in, any@ data) {
-            if (item < 0) return;
-            string map; data.retrieve(map);
-            StartVote(map);
+        // Correct callback signature with CTextMenuItem
+        void OnMapChosen(CTextMenu@ menu, CBasePlayer@ pl, int item, const CTextMenuItem@ pItem) {
+            if (item < 0 or pItem is null) return;
+            string chosen = pItem.m_szName;
+            // prefer userdata if present
+            any@ data = pItem.m_pUserData;
+            if (data !is null) data.retrieve(chosen);
+            StartVote(chosen);
         }
 
         void OpenYesNoMenuAll() {
             CTextMenu@ m = CTextMenu(@OnYesNo);
-            m.SetTitle("RockTheVote – " + g_candidateMap + " ?");
-            m.AddItem("Ja", any(true));
-            m.AddItem("Nein", any(false));
+            m.SetTitle("RockTheVote - " + g_candidateMap + " ?");
+            m.AddItem("Yes", any(true));
+            m.AddItem("No", any(false));
             m.Register();
-            // an alle öffnen
             for (int i = 1; i <= g_Engine.maxClients; ++i) {
                 CBasePlayer@ pl = g_PlayerFuncs.FindPlayerByIndex(i);
                 if (pl is null || !pl.IsConnected()) continue;
@@ -246,13 +254,15 @@
             }
         }
 
-        void OnYesNo(CTextMenu@, CBasePlayer@ pl, int item, const string& in, any@ data) {
-            if (item < 0) return;
-            bool yes; data.retrieve(yes);
+        void OnYesNo(CTextMenu@, CBasePlayer@ pl, int item, const CTextMenuItem@ pItem) {
+            if (item < 0 or pItem is null) return;
+            any@ data = pItem.m_pUserData;
+            bool yes = (pItem.m_szName == "Yes");
+            if (data !is null) data.retrieve(yes);
             Vote(pl, yes);
         }
 
-        // ---------- Vote-Flow ----------
+        // ---------- Vote flow ----------
         bool CanStartNewVote(const string &in steamid) {
             float now = g_Engine.time;
             if (now - g_lastVoteStart < g_cfg.rtvStartCooldownSec) return false;
@@ -270,18 +280,18 @@
             g_yesVotes.deleteAll(); g_noVotes.deleteAll();
             g_lastVoteStart = g_Engine.time;
 
-            // Startmeldung + Startsound
+            // Start message + start sound
             dictionary v; v["MAP"] = map; v["SEC"] = "" + g_cfg.voteDurationSec;
             PrintAll(Lang.T("VOTE_START", v), true);
             if (g_cfg.soundOnStart.Length() > 0) PlaySoundAll(g_cfg.soundOnStart);
 
-            // Ja/Nein-Menü + Chat
+            // Yes/No menu
             OpenYesNoMenuAll();
-            // Fortschrittsticker
+            // progress ticker
             g_Scheduler.SetTimeout("RTV::TickProgress", float(g_cfg.uiProgressTickSec));
-            // Countdown pro Sekunde
+            // countdown per second
             g_Scheduler.SetTimeout("RTV::Countdown", 1.0f, g_cfg.voteDurationSec);
-            // Ende
+            // end
             g_Scheduler.SetTimeout("RTV::FinishVote", float(g_cfg.voteDurationSec));
         }
 
@@ -289,13 +299,13 @@
             if (!g_voteActive) return;
             if (secondsLeft <= 0) return;
 
-            // Letzte 10 Sekunden: fvox-Sprachsamples
+            // last 10 seconds: fvox spoken digits
             if (g_cfg.enableCountdownSounds && secondsLeft <= 10) {
                 string s = FvoxForNumber(secondsLeft);
                 if (s.Length() > 0) PlaySoundAll(s);
             }
 
-            // HUD-Zahl
+            // HUD number
             HUDTextParams p; p.x = -1; p.y = 0.40; p.effect = 0;
             p.r1 = 255; p.g1 = 255; p.b1 = 255; p.a1 = 255;
             p.fadeinTime = 0.02f; p.fadeoutTime = 0.1f; p.holdTime = 0.9f;
@@ -354,13 +364,14 @@
             }
         }
 
-        // ---------- Nominierung ----------
+        // ---------- Nomination ----------
         void Nominate(CBasePlayer@, const string &in map) {
-            if (!g_cfg.allowNomination) { PrintAll("Nominierungen sind deaktiviert."); return; }
-            string m = map.Trim();
+            if (!g_cfg.allowNomination) { PrintAll("Nominations are disabled."); return; }
+            string m = map; // copy (map is const)
+            m.Trim();
             if (m.Length() == 0) return;
             if (g_nominations.find(m) < 0) g_nominations.insertLast(m);
-            PrintAll("Nominiert: " + m);
+            PrintAll("Nominated: " + m);
         }
 
         // ---------- Hooks / Commands ----------
@@ -384,10 +395,10 @@
         void CmdNo (const CCommand@) { CBasePlayer@ pl = g_ConCommandSystem.GetCurrentPlayer(); if (pl !is null) Vote(pl, false); }
         void CmdVersion(const CCommand@) { g_PlayerFuncs.ClientPrintAll(HUD_PRINTTALK, "[RTV] RockTheVote v" + RTV_VERSION + "\n"); }
 
-        // ---------- Engine Lifecycle ----------
+        // ---------- Engine lifecycle ----------
         void PluginInit() {
             g_Module.ScriptInfo.SetAuthor("wahke.lu");
-            g_Module.ScriptInfo.SetContactInfo("RockTheVote v" + RTV_VERSION + " – Created by wahke.lu");
+            g_Module.ScriptInfo.SetContactInfo("RockTheVote v" + RTV_VERSION + " - Created by wahke.lu");
 
             g_Hooks.RegisterHook(Hooks::Player::ClientSay, @OnSay);
 
@@ -395,13 +406,13 @@
         }
 
         void MapInit() {
-            // Config + Sprache laden
+            // Load config + language
             LoadConfig();
             Lang.Set(g_cfg.messagesLang);
             string langPath = "scripts/plugins/RockTheVote/lang/" + g_cfg.messagesLang + ".txt";
             Lang.Load(langPath);
 
-            // Sounds precachen
+            // Precache sounds
             PrecacheSounds();
         }
 
