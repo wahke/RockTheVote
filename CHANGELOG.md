@@ -1,5 +1,8 @@
 # Changelog
 
+## v1.0.1
+- Bug Fix
+
 ## v1.0.0 (Initial Release)
 - Erste stabile Version von RockTheVote
 - /rtv Map-Auswahlmenü

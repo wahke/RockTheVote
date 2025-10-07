@@ -1,4 +1,3 @@
-\
     // RockTheVote.as
     // Plugin: RockTheVote
     // Author: wahke.lu
@@ -8,7 +7,7 @@
     namespace RTV
     {
         // --- Version (für Releases) ---
-        const string RTV_VERSION = "1.0.0";
+        const string RTV_VERSION = "1.0.1";
 
         // ---------- Konfig ----------
         class Cfg {
