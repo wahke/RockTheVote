@@ -1,0 +1,3 @@
+# One SteamID per line. Example entries:
+# (Your ID from earlier messages is included below. Remove it if undesired.)
+STEAM_0:1:25713237

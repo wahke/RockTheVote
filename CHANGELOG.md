@@ -1,7 +1,12 @@
 # Changelog
 
+## v1.0.5
+- Bug Fix
+- Add Feature
+
 ## v1.0.4
 - Bug Fix
+- Menü Fix
 
 ## v1.0.3
 - Bug Fix

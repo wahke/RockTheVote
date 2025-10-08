@@ -6,3 +6,12 @@ VOTE_BUSY=Es läuft bereits ein Vote.
 VOTE_FEW=Zu wenige Spieler online.
 VOTE_COOLDOWN=Bitte warte mit dem nächsten Vote.
 MENU_TITLE=RockTheVote – Map wählen
+NO_MAPS_FOUND=Keine Maps gefunden (mapcycle/config/index leer?)
+NOM_DISABLED=Nominationen sind deaktiviert.
+NOM_ADDED=Nominiert: {MAP}
+VOTE_QUESTION=RockTheVote - {MAP} ?
+YES=Ja
+NO=Nein
+DEBUG_CHAT=lang={LANG} keys={KEYS} pool={POOL}
+ADMIN_ONLY_FORCE=Nur Admins dürfen /rtv_force nutzen.
+ADMIN_ONLY_FINISH=Nur Admins dürfen /rtv_finish nutzen.
